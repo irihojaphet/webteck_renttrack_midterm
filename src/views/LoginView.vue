@@ -41,15 +41,14 @@ async function handleSubmit(event) {
 
   try {
     await auth.login(email.value.trim(), password.value)
-    const role = auth.role
     const redirect = route.query.redirect || null
     if (typeof redirect === 'string') {
       router.push(redirect)
       return
     }
-    if (role.value === 'landlord') {
+    if (auth.role === 'landlord') {
       router.push('/landlord/dashboard')
-    } else if (role.value === 'tenant') {
+    } else if (auth.role === 'tenant') {
       router.push('/tenant/dashboard')
     } else {
       router.push('/')
@@ -159,8 +158,17 @@ async function handleSubmit(event) {
             Signing in...
           </span>
         </button>
+
+        <p class="mt-2 text-center text-xs text-slate-600">
+          Don't have an account?
+          <router-link
+            to="/signup"
+            class="font-medium text-indigo-600 hover:text-indigo-700"
+          >
+            Create one instead
+          </router-link>
+        </p>
       </form>
     </section>
   </main>
 </template>
-

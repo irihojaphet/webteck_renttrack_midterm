@@ -168,7 +168,7 @@ async function handleSubmit(event) {
               role="status"
               aria-label="Creating account"
             ></span>
-            Creating…
+            Creating...
           </span>
         </button>
 
@@ -185,4 +185,5 @@ async function handleSubmit(event) {
     </section>
   </main>
 </template>
+
 
