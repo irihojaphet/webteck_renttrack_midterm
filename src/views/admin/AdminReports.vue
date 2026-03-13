@@ -35,10 +35,6 @@ const columns = [
       <h1 class="mt-2 text-3xl font-semibold text-slate-950">
         Subscription revenue reports
       </h1>
-      <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-        Annual plans contribute recurring revenue while lifetime plans create one-time spikes. Unpaid or expired
-        landlords are shown below so the admin can follow up.
-      </p>
     </div>
 
     <div class="grid gap-4 md:grid-cols-3">

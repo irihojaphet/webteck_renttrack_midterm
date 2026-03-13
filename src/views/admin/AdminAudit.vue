@@ -32,10 +32,6 @@ const columns = [
       <h1 class="text-3xl font-semibold text-slate-950">
         Audit trail
       </h1>
-      <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-        Every important action is recorded with actor, action type, entity, and timestamp so administrators and
-        landlords can verify the operational history of the app.
-      </p>
       <div class="mt-5 grid gap-4 md:grid-cols-2">
         <label class="space-y-1.5 text-sm text-slate-700">
           <span class="font-medium">Filter by role</span>

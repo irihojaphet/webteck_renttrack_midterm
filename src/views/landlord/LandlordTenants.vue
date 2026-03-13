@@ -88,10 +88,6 @@ function createTenant() {
         <h1 class="text-3xl font-semibold text-slate-950">
           Tenants and unit assignment
         </h1>
-        <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-          New tenants must be assigned to a property and one available unit. Creating the tenant also creates an active
-          lease and marks the unit occupied.
-        </p>
       </div>
       <button type="button" class="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white" @click="modalOpen = true">
         Add tenant

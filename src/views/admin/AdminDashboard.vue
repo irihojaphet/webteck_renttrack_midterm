@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import dashboardHero from '../../assets/placeholders/dashboard-hero.svg'
+import dashboardHero from '../../assets/placeholders/dashboard-hero.jpg'
 import EmptyState from '../../components/EmptyState.vue'
 import StatCard from '../../components/StatCard.vue'
 import Table from '../../components/Table.vue'
@@ -33,12 +33,8 @@ const columns = [
         <h1 class="mt-3 text-3xl font-semibold text-slate-950">
           Monitor landlord coverage and payment performance.
         </h1>
-        <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-          Revenue rolls up from paid subscriptions, while audit events show the latest administrative actions across
-          the platform.
-        </p>
       </div>
-      <img :src="dashboardHero" alt="" class="w-full rounded-[32px] border border-slate-200 bg-white p-3 shadow-sm" />
+      <img :src="dashboardHero" alt="" class="dashboard-hero-image h-full w-full rounded-[32px] border border-slate-200 object-cover shadow-sm" />
     </div>
 
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -54,9 +50,6 @@ const columns = [
           <h2 class="text-xl font-semibold text-slate-950">
             Revenue mix
           </h2>
-          <p class="mt-1 text-sm text-slate-600">
-            Annual and lifetime subscription totals based on paid plan records.
-          </p>
         </div>
         <div class="grid gap-4 md:grid-cols-2">
           <div class="rounded-[24px] bg-indigo-50 p-5">

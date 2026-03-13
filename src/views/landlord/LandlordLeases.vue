@@ -44,9 +44,6 @@ function endLease(id) {
       <h1 class="text-3xl font-semibold text-slate-950">
         Leases
       </h1>
-      <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-        Active leases occupy units automatically. Ending a lease releases the unit back to available inventory.
-      </p>
     </div>
 
     <Table :columns="columns" :rows="rows">

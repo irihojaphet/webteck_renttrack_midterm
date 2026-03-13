@@ -93,9 +93,6 @@ function regenerate(propertyId) {
         <h1 class="text-3xl font-semibold text-slate-950">
           Properties and unit automation
         </h1>
-        <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-          Each property generates unit codes automatically from a stable prefix. Family houses are forced to one unit.
-        </p>
       </div>
       <button type="button" class="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white" @click="openCreate">
         Add property

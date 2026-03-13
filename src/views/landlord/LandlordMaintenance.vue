@@ -53,10 +53,6 @@ function openChat(row) {
       <h1 class="text-3xl font-semibold text-slate-950">
         Maintenance claims
       </h1>
-      <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-        Tenant issues move through Open, InProgress, and Resolved states. You can open a linked chat thread for each
-        ticket when more context is needed.
-      </p>
     </div>
 
     <Table :columns="columns" :rows="rows">

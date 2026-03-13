@@ -1,10 +1,12 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import loginHero from '../assets/placeholders/login-hero.svg'
+import loginHero from '../assets/placeholders/login-hero.jpg'
 import { useAuthStore } from '../stores/auth'
+import { useThemeStore } from '../stores/theme'
 
 const auth = useAuthStore()
+const themeStore = useThemeStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -80,23 +82,29 @@ async function submit() {
 </script>
 
 <template>
-  <main class="min-h-screen bg-gradient-to-br from-slate-100 via-white to-indigo-50 px-4 py-10">
+  <main class="min-h-screen bg-slate-100 px-4 py-10">
     <div class="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.2fr,0.8fr] lg:items-center">
       <section class="rounded-[36px] border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/60">
-        <p class="text-xs font-semibold uppercase tracking-[0.32em] text-indigo-600">
-          RentTrack
-        </p>
+        <div class="flex items-center justify-between gap-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.32em] text-indigo-600">
+            RentTrack
+          </p>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-lg text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            :aria-label="themeStore.mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+            @click="themeStore.toggle"
+          >
+            {{ themeStore.mode === 'dark' ? '☼' : '☾' }}
+          </button>
+        </div>
         <h1 class="mt-4 text-4xl font-semibold text-slate-950">
-          Automated property operations for admins, landlords, and tenants.
+          Property management for admins, landlords, and tenants.
         </h1>
-        <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-600">
-          This demo runs entirely in local storage and still simulates subscriptions, unit automation, lease
-          occupancy, payment-proof workflows, maintenance coordination, chat, notifications, and audit history.
-        </p>
         <img
           :src="loginHero"
           alt=""
-          class="mt-8 w-full rounded-[28px] border border-slate-200 bg-slate-50"
+          class="login-hero-image mt-8 h-[24rem] w-full rounded-[28px] border border-slate-200 object-cover"
         />
       </section>
 
@@ -105,9 +113,6 @@ async function submit() {
           <h2 class="text-2xl font-semibold text-slate-950">
             Sign in
           </h2>
-          <p class="mt-2 text-sm text-slate-600">
-            Use one of the seeded demo accounts or sign in with data you create from the admin and landlord modules.
-          </p>
 
           <form class="mt-6 space-y-4" novalidate @submit.prevent="submit">
             <div v-if="errors.form" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
@@ -170,9 +175,6 @@ async function submit() {
                 </p>
                 <p class="font-mono text-sm text-slate-900">
                   {{ account.password }}
-                </p>
-                <p class="mt-2 text-sm leading-6 text-slate-600">
-                  {{ account.note }}
                 </p>
               </div>
               <button

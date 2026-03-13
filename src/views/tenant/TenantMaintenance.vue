@@ -83,9 +83,6 @@ function openChat(row) {
         <h1 class="text-3xl font-semibold text-slate-950">
           Create maintenance claim
         </h1>
-        <p class="mt-3 text-sm leading-7 text-slate-600">
-          Describe the issue, attach optional images, and track status updates from your landlord.
-        </p>
         <div class="mt-5 grid gap-4 md:grid-cols-2">
           <FormField field-id="ticket-title" label="Title">
             <input id="ticket-title" v-model="form.title" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />

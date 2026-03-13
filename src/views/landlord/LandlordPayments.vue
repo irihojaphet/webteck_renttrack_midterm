@@ -46,10 +46,6 @@ function markLate(row) {
       <h1 class="text-3xl font-semibold text-slate-950">
         Confirmed payments and late ledger
       </h1>
-      <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-        Late records are generated automatically for past lease months with no confirmed payment. Confirmed proofs turn
-        into paid or partial records based on the lease rent amount.
-      </p>
     </div>
 
     <Table :columns="columns" :rows="rows">

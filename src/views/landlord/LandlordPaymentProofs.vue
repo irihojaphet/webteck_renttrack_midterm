@@ -74,9 +74,6 @@ function rejectProof() {
       <h1 class="text-3xl font-semibold text-slate-950">
         Payment proof review
       </h1>
-      <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-        Each proof stays pending until you confirm or reject it. Rejecting requires a reason that the tenant can read.
-      </p>
     </div>
 
     <Table :columns="columns" :rows="rows">

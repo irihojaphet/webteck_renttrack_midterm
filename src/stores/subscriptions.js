@@ -132,15 +132,16 @@ export const useSubscriptionsStore = defineStore('subscriptions', {
         summary: 'Annual subscription renewed for one year.',
       })
     },
-    requestDemoPayment({ landlordId, actorRole, actorId }) {
+    requestDemoPayment({ landlordId, planType, actorRole, actorId }) {
       const notificationsStore = useNotificationsStore()
       const auditStore = useAuditLogsStore()
+      const selectedPlanType = planType || this.getSubscription(landlordId)?.planType || 'annual'
       notificationsStore.createNotification({
         recipientUserId: 'user-admin',
         recipientRole: 'admin',
         type: 'subscription_request',
         title: 'Landlord requested subscription activation',
-        message: `Landlord ${landlordId} requested a demo payment activation.`,
+        message: `Landlord ${landlordId} requested a demo payment activation for the ${selectedPlanType} plan.`,
       })
       auditStore.log({
         actorRole,
@@ -148,7 +149,15 @@ export const useSubscriptionsStore = defineStore('subscriptions', {
         actionType: 'subscription_payment_requested',
         entityType: 'subscription',
         entityId: landlordId,
-        summary: 'Landlord requested subscription activation in demo mode.',
+        summary: `Landlord requested ${selectedPlanType} subscription activation in demo mode.`,
+      })
+      this.setSubscriptionState({
+        landlordId,
+        planType: selectedPlanType,
+        status: 'paid',
+        actorRole,
+        actorId,
+        summary: `Demo payment simulated and ${selectedPlanType} subscription activated immediately.`,
       })
     },
   },

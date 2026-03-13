@@ -66,10 +66,6 @@ function submitProof() {
         <h1 class="text-3xl font-semibold text-slate-950">
           Submit payment proof
         </h1>
-        <p class="mt-3 text-sm leading-7 text-slate-600">
-          Upload a proof image for a given month. Your landlord will confirm or reject it, and confirmed proofs update
-          your payment history automatically.
-        </p>
         <div v-if="currentLease" class="mt-5 rounded-[24px] bg-slate-50 p-4 text-sm text-slate-600">
           Monthly rent due:
           <span class="font-semibold text-slate-950">{{ Number(currentLease.monthlyRent).toLocaleString() }} RWF</span>

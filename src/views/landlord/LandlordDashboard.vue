@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import dashboardHero from '../../assets/placeholders/dashboard-hero.svg'
+import dashboardHero from '../../assets/placeholders/dashboard-hero.jpg'
 import Badge from '../../components/Badge.vue'
 import StatCard from '../../components/StatCard.vue'
 import Table from '../../components/Table.vue'
@@ -72,12 +72,8 @@ const auditColumns = [
         <h1 class="mt-3 text-3xl font-semibold text-slate-950">
           Property occupancy, pending reviews, and maintenance load in one place.
         </h1>
-        <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-          This dashboard is driven from live property, unit, payment-proof, payment, ticket, and audit records stored
-          locally.
-        </p>
       </div>
-      <img :src="dashboardHero" alt="" class="w-full rounded-[32px] border border-slate-200 bg-white p-3 shadow-sm" />
+      <img :src="dashboardHero" alt="" class="dashboard-hero-image h-full w-full rounded-[32px] border border-slate-200 object-cover shadow-sm" />
     </div>
 
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">

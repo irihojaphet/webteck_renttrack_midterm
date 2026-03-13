@@ -40,10 +40,6 @@ const paymentColumns = [
       <h1 class="mt-3 text-3xl font-semibold text-slate-950">
         Follow your lease, rent proof, and maintenance requests.
       </h1>
-      <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-        This dashboard combines your active lease assignment, payment history, pending proof reviews, and maintenance
-        activity.
-      </p>
     </div>
 
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
