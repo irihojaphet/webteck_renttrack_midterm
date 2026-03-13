@@ -7,25 +7,26 @@ const router = useRouter()
 const auth = useAuthStore()
 
 onMounted(() => {
-  if (auth.isAuthenticated) {
-    if (auth.role === 'landlord') {
-      router.replace('/landlord/dashboard')
-    } else if (auth.role === 'tenant') {
-      router.replace('/tenant/dashboard')
-    } else {
-      router.replace('/login')
-    }
-  } else {
-    router.replace('/login')
+  if (auth.role === 'admin') {
+    router.replace('/admin/dashboard')
+    return
   }
+  if (auth.role === 'landlord') {
+    router.replace('/landlord/dashboard')
+    return
+  }
+  if (auth.role === 'tenant') {
+    router.replace('/tenant/dashboard')
+    return
+  }
+  router.replace('/login')
 })
 </script>
 
 <template>
-  <main class="flex min-h-screen items-center justify-center bg-slate-50">
+  <main class="flex min-h-screen items-center justify-center bg-slate-100">
     <p class="text-sm text-slate-600">
-      Redirecting to your dashboard…
+      Redirecting to your workspace...
     </p>
   </main>
 </template>
-

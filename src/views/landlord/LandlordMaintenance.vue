@@ -1,176 +1,95 @@
 <script setup>
-import { computed, ref } from 'vue'
-import PageHeader from '../../components/PageHeader.vue'
-import EmptyState from '../../components/EmptyState.vue'
-import BadgeStatus from '../../components/BadgeStatus.vue'
-import { useTicketsStore } from '../../stores/tickets'
+import { computed } from 'vue'
+import { useRouter } from 'vue-router'
+import Badge from '../../components/Badge.vue'
+import Table from '../../components/Table.vue'
+import { useAuthStore } from '../../stores/auth'
+import { useChatsStore } from '../../stores/chats'
 import { useTenantsStore } from '../../stores/tenants'
-import { usePropertiesStore } from '../../stores/properties'
+import { useTicketsStore } from '../../stores/tickets'
 
+const router = useRouter()
+const auth = useAuthStore()
 const ticketsStore = useTicketsStore()
 const tenantsStore = useTenantsStore()
-const propertiesStore = usePropertiesStore()
+const chatsStore = useChatsStore()
 
-const search = ref('')
-const statusFilter = ref('all')
-
-const ticketsWithContext = computed(() =>
+const rows = computed(() =>
   ticketsStore.items
-    .slice()
-    .sort((a, b) => (a.createdAt && b.createdAt ? (a.createdAt < b.createdAt ? 1 : -1) : 0))
+    .filter((ticket) => ticket.landlordId === auth.currentUser.id)
     .map((ticket) => ({
       ...ticket,
-      tenant: tenantsStore.byId.get(ticket.tenantId) || null,
-      property: propertiesStore.byId.get(ticket.propertyId) || null,
+      tenant: tenantsStore.items.find((tenant) => tenant.id === ticket.tenantId),
     })),
 )
 
-const filteredTickets = computed(() => {
-  const term = search.value.trim().toLowerCase()
-  const status = statusFilter.value
-  return ticketsWithContext.value.filter((t) => {
-    if (status !== 'all' && t.status !== status) return false
-    if (!term) return true
-    const pieces = [
-      t.title,
-      t.category,
-      t.priority,
-      t.status,
-      t.tenant?.fullName,
-      t.property?.name,
-      t.property?.location,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-    return pieces.includes(term)
-  })
-})
+const columns = [
+  { key: 'title', label: 'Issue' },
+  { key: 'tenant', label: 'Tenant' },
+  { key: 'priority', label: 'Priority' },
+  { key: 'status', label: 'Status' },
+  { key: 'actions', label: 'Actions' },
+]
 
-function updateStatus(ticket, newStatus) {
-  ticketsStore.edit(ticket.id, { status: newStatus })
+function updateStatus(id, status) {
+  ticketsStore.updateStatus(id, status, { role: auth.role, id: auth.currentUser.id })
+}
+
+function openChat(row) {
+  const thread = chatsStore.getOrCreateThread({
+    landlordId: row.landlordId,
+    tenantId: row.tenantId,
+    contextType: 'maintenance_ticket',
+    contextId: row.id,
+    subject: row.title,
+  })
+  router.push(`/landlord/chat?thread=${thread.id}`)
 }
 </script>
 
 <template>
-  <section aria-labelledby="landlord-maintenance-title">
-    <PageHeader
-      id="landlord-maintenance-title"
-      title="Maintenance tickets"
-      subtitle="Review and update maintenance requests submitted by tenants."
-    />
-
-    <div class="mb-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-      <label class="flex-1 text-sm">
-        <span class="sr-only">Search tickets</span>
-        <input
-          v-model="search"
-          type="search"
-          placeholder="Search by tenant, property, title, or status"
-          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-      </label>
-      <label class="text-sm">
-        <span class="mr-2 text-slate-700">Status</span>
-        <select
-          v-model="statusFilter"
-          class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="all">All</option>
-          <option value="Open">Open</option>
-          <option value="InProgress">In progress</option>
-          <option value="Resolved">Resolved</option>
-        </select>
-      </label>
+  <section class="space-y-6">
+    <div class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
+      <h1 class="text-3xl font-semibold text-slate-950">
+        Maintenance claims
+      </h1>
     </div>
 
-    <div v-if="!ticketsStore.items.length" class="mt-4">
-      <EmptyState
-        title="No maintenance tickets yet"
-        description="When tenants submit maintenance requests, they will appear here for you to triage."
-        action-label=""
-      />
-    </div>
-
-    <div v-else>
-      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table class="min-w-full text-left text-sm">
-          <thead class="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
-            <tr>
-              <th scope="col" class="px-3 py-2">Created</th>
-              <th scope="col" class="px-3 py-2">Tenant</th>
-              <th scope="col" class="px-3 py-2">Property</th>
-              <th scope="col" class="px-3 py-2">Request</th>
-              <th scope="col" class="px-3 py-2">Priority</th>
-              <th scope="col" class="px-3 py-2">Status</th>
-              <th scope="col" class="px-3 py-2 text-right">Update status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="ticket in filteredTickets"
-              :key="ticket.id"
-              class="border-t border-slate-100 align-top hover:bg-slate-50"
-            >
-              <td class="px-3 py-2 text-xs text-slate-500">
-                {{ ticket.createdAt?.slice(0, 10) }}
-              </td>
-              <td class="px-3 py-2 text-slate-700">
-                <p>{{ ticket.tenant?.fullName || 'Unknown tenant' }}</p>
-              </td>
-              <td class="px-3 py-2 text-slate-700">
-                <p>{{ ticket.property?.name || 'Unknown property' }}</p>
-                <p v-if="ticket.property?.location" class="text-xs text-slate-500">
-                  {{ ticket.property.location }}
-                </p>
-              </td>
-              <td class="px-3 py-2 text-slate-700">
-                <p class="font-medium text-slate-900">
-                  {{ ticket.title }}
-                </p>
-                <p v-if="ticket.description" class="mt-1 text-xs text-slate-600">
-                  {{ ticket.description }}
-                </p>
-              </td>
-              <td class="px-3 py-2 text-xs text-slate-700">
-                {{ ticket.category }} · {{ ticket.priority }}
-              </td>
-              <td class="px-3 py-2">
-                <BadgeStatus :kind="ticket.status" />
-              </td>
-              <td class="px-3 py-2 text-right">
-                <div class="inline-flex gap-2">
-                  <button
-                    type="button"
-                    class="rounded-md border border-sky-200 px-2 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
-                    :disabled="ticket.status === 'Open'"
-                    @click="updateStatus(ticket, 'Open')"
-                  >
-                    Mark open
-                  </button>
-                  <button
-                    type="button"
-                    class="rounded-md border border-amber-200 px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
-                    :disabled="ticket.status === 'InProgress'"
-                    @click="updateStatus(ticket, 'InProgress')"
-                  >
-                    In progress
-                  </button>
-                  <button
-                    type="button"
-                    class="rounded-md border border-emerald-200 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
-                    :disabled="ticket.status === 'Resolved'"
-                    @click="updateStatus(ticket, 'Resolved')"
-                  >
-                    Resolved
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <Table :columns="columns" :rows="rows">
+      <template #title="{ row }">
+        <div class="space-y-2">
+          <p class="font-medium text-slate-950">{{ row.title }}</p>
+          <p class="text-xs leading-5 text-slate-500">{{ row.description }}</p>
+          <div class="flex gap-2">
+            <img
+              v-for="image in row.proofImages"
+              :key="image"
+              :src="image"
+              alt=""
+              class="h-16 w-20 rounded-xl border border-slate-200 object-cover"
+            />
+          </div>
+        </div>
+      </template>
+      <template #tenant="{ row }">
+        {{ row.tenant?.fullName }}
+      </template>
+      <template #status="{ row }">
+        <Badge :kind="row.status" />
+      </template>
+      <template #actions="{ row }">
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="rounded-full border border-slate-200 px-3 py-1 text-xs" @click="updateStatus(row.id, 'InProgress')">
+            In progress
+          </button>
+          <button type="button" class="rounded-full border border-slate-200 px-3 py-1 text-xs" @click="updateStatus(row.id, 'Resolved')">
+            Resolve
+          </button>
+          <button type="button" class="rounded-full border border-slate-200 px-3 py-1 text-xs" @click="openChat(row)">
+            Chat
+          </button>
+        </div>
+      </template>
+    </Table>
   </section>
 </template>
-

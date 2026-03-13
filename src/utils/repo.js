@@ -1,10 +1,5 @@
 import { getEntity, setEntity } from './storage'
-
-function generateId(prefix) {
-  const random = Math.random().toString(36).slice(2, 8)
-  const stamp = Date.now().toString(36)
-  return `${prefix}-${stamp}-${random}`
-}
+import { createId } from './domain'
 
 export function getAll(entity) {
   return getEntity(entity)
@@ -19,7 +14,7 @@ export function create(entity, data) {
   const now = new Date().toISOString()
   const record = {
     ...data,
-    id: data.id || generateId(entity),
+    id: data.id || createId(entity),
     createdAt: data.createdAt || now,
   }
   setEntity(entity, [...existing, record])
@@ -39,3 +34,21 @@ export function remove(entity, id) {
   setEntity(entity, filtered)
 }
 
+export function replaceAll(entity, items) {
+  setEntity(entity, items)
+  return items
+}
+
+export function upsert(entity, predicate, data) {
+  const items = getEntity(entity)
+  const index = items.findIndex(predicate)
+
+  if (index === -1) {
+    return create(entity, data)
+  }
+
+  const next = [...items]
+  next[index] = { ...next[index], ...data }
+  setEntity(entity, next)
+  return next[index]
+}

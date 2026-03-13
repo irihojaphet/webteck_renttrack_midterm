@@ -1,63 +1,99 @@
-import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { getAll, create, update, remove } from '../utils/repo'
+import { create, getAll, update } from '../utils/repo'
+import { computePaymentStatus, currentMonth, listMonthsBetween, monthIsPast } from '../utils/domain'
+import { useAuditLogsStore } from './auditLogs'
+import { useUiStore } from './ui'
 
-const ENTITY = 'payments'
+export const usePaymentsStore = defineStore('payments', {
+  state: () => ({
+    items: getAll('payments'),
+  }),
+  getters: {
+    totalCollected(state) {
+      return state.items.reduce((sum, payment) => sum + Number(payment.amountPaid || 0), 0)
+    },
+  },
+  actions: {
+    refresh() {
+      this.items = getAll('payments')
+    },
+    upsertConfirmedPayment({ lease, tenantId, month, amountPaid, actor }) {
+      const existing = this.items.find((payment) => payment.leaseId === lease.id && payment.month === month)
+      const status = computePaymentStatus(amountPaid, lease.monthlyRent, false)
 
-export const usePaymentsStore = defineStore(ENTITY, () => {
-  const items = ref([...getAll(ENTITY)])
+      if (existing) {
+        update('payments', existing.id, {
+          amountPaid,
+          status,
+        })
+      } else {
+        create('payments', {
+          leaseId: lease.id,
+          tenantId,
+          month,
+          amountPaid,
+          status,
+        })
+      }
 
-  const count = computed(() => items.value.length)
-
-  function refresh() {
-    items.value = [...getAll(ENTITY)]
-  }
-
-  function add(payment) {
-    const created = create(ENTITY, payment)
-    items.value.push(created)
-    return created
-  }
-
-  function edit(id, partial) {
-    const updated = update(ENTITY, id, partial)
-    refresh()
-    return updated
-  }
-
-  function removeById(id) {
-    remove(ENTITY, id)
-    refresh()
-  }
-
-  const byTenantId = computed(() => {
-    const map = new Map()
-    items.value.forEach((p) => {
-      const list = map.get(p.tenantId) || []
-      list.push(p)
-      map.set(p.tenantId, list)
-    })
-    return map
-  })
-
-  const totalsByMonth = computed(() => {
-    const totals = {}
-    items.value.forEach((p) => {
-      if (!totals[p.month]) totals[p.month] = 0
-      totals[p.month] += Number(p.amountPaid || 0)
-    })
-    return totals
-  })
-
-  return {
-    items,
-    count,
-    byTenantId,
-    totalsByMonth,
-    refresh,
-    add,
-    edit,
-    removeById,
-  }
+      this.refresh()
+      useAuditLogsStore().log({
+        actorRole: actor.role,
+        actorId: actor.id,
+        actionType: 'payment_confirmed',
+        entityType: 'payment',
+        entityId: `${lease.id}:${month}`,
+        summary: `Confirmed payment for ${month} with status ${status}.`,
+      })
+      useUiStore().toast({
+        title: 'Payment saved',
+        message: `Payment status is ${status}.`,
+      })
+    },
+    markLate(lease, month, actor) {
+      const existing = this.items.find((payment) => payment.leaseId === lease.id && payment.month === month)
+      if (existing) {
+        update('payments', existing.id, {
+          amountPaid: 0,
+          status: 'Late',
+        })
+      } else {
+        create('payments', {
+          leaseId: lease.id,
+          tenantId: lease.tenantId,
+          month,
+          amountPaid: 0,
+          status: 'Late',
+        })
+      }
+      this.refresh()
+      useAuditLogsStore().log({
+        actorRole: actor.role,
+        actorId: actor.id,
+        actionType: 'payment_marked_late',
+        entityType: 'payment',
+        entityId: `${lease.id}:${month}`,
+        summary: `Marked payment for ${month} as late.`,
+      })
+    },
+    syncLatePayments(leases) {
+      leases.forEach((lease) => {
+        listMonthsBetween(lease.startDate, currentMonth())
+          .filter((month) => monthIsPast(month))
+          .forEach((month) => {
+            const existing = this.items.find((payment) => payment.leaseId === lease.id && payment.month === month)
+            if (!existing) {
+              create('payments', {
+                leaseId: lease.id,
+                tenantId: lease.tenantId,
+                month,
+                amountPaid: 0,
+                status: 'Late',
+              })
+            }
+          })
+      })
+      this.refresh()
+    },
+  },
 })
-

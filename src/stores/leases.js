@@ -1,51 +1,65 @@
-import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { getAll, create, update, remove } from '../utils/repo'
+import { create, getAll, update } from '../utils/repo'
+import { useAuditLogsStore } from './auditLogs'
+import { useUnitsStore } from './units'
+import { useUiStore } from './ui'
 
-const ENTITY = 'leases'
+export const useLeasesStore = defineStore('leases', {
+  state: () => ({
+    items: getAll('leases'),
+  }),
+  getters: {
+    activeItems(state) {
+      return state.items.filter((lease) => lease.status === 'active')
+    },
+  },
+  actions: {
+    refresh() {
+      this.items = getAll('leases')
+    },
+    createLease(payload, actor) {
+      if (this.items.some((lease) => lease.unitId === payload.unitId && lease.status === 'active')) {
+        throw new Error('This unit already has an active lease.')
+      }
 
-export const useLeasesStore = defineStore(ENTITY, () => {
-  const items = ref([...getAll(ENTITY)])
-
-  const count = computed(() => items.value.length)
-  const activeCount = computed(() => items.value.filter((l) => l.status === 'active').length)
-
-  function refresh() {
-    items.value = [...getAll(ENTITY)]
-  }
-
-  function add(lease) {
-    const created = create(ENTITY, lease)
-    items.value.push(created)
-    return created
-  }
-
-  function edit(id, partial) {
-    const updated = update(ENTITY, id, partial)
-    refresh()
-    return updated
-  }
-
-  function removeById(id) {
-    remove(ENTITY, id)
-    refresh()
-  }
-
-  const byId = computed(() => {
-    const map = new Map()
-    items.value.forEach((l) => map.set(l.id, l))
-    return map
-  })
-
-  return {
-    items,
-    count,
-    activeCount,
-    byId,
-    refresh,
-    add,
-    edit,
-    removeById,
-  }
+      const lease = create('leases', payload)
+      useUnitsStore().setUnitStatus(payload.unitId, 'Occupied')
+      this.refresh()
+      useAuditLogsStore().log({
+        actorRole: actor.role,
+        actorId: actor.id,
+        actionType: 'lease_created',
+        entityType: 'lease',
+        entityId: lease.id,
+        summary: `Created lease starting ${payload.startDate}.`,
+      })
+      useUiStore().toast({
+        title: 'Lease created',
+        message: 'The assigned unit is now marked occupied.',
+      })
+      return lease
+    },
+    endLease(id, actor) {
+      const lease = this.items.find((item) => item.id === id)
+      if (!lease) return
+      update('leases', id, {
+        status: 'ended',
+        endedAt: new Date().toISOString(),
+      })
+      useUnitsStore().setUnitStatus(lease.unitId, 'Available')
+      this.refresh()
+      useAuditLogsStore().log({
+        actorRole: actor.role,
+        actorId: actor.id,
+        actionType: 'lease_ended',
+        entityType: 'lease',
+        entityId: id,
+        summary: 'Ended lease and released unit occupancy.',
+      })
+      useUiStore().toast({
+        title: 'Lease ended',
+        message: 'The unit is available again.',
+      })
+    },
+  },
 })
-

@@ -1,256 +1,191 @@
 <script setup>
-import { computed, ref } from 'vue'
-import PageHeader from '../../components/PageHeader.vue'
+import { computed, reactive, ref } from 'vue'
+import Badge from '../../components/Badge.vue'
 import EmptyState from '../../components/EmptyState.vue'
-import BaseModal from '../../components/BaseModal.vue'
+import FormField from '../../components/FormField.vue'
+import Modal from '../../components/Modal.vue'
+import Table from '../../components/Table.vue'
+import emptyTenants from '../../assets/placeholders/empty-tenants.svg'
+import { useAuthStore } from '../../stores/auth'
 import { usePropertiesStore } from '../../stores/properties'
+import { useUnitsStore } from '../../stores/units'
 
-const store = usePropertiesStore()
+const auth = useAuthStore()
+const propertiesStore = usePropertiesStore()
+const unitsStore = useUnitsStore()
 
-const search = ref('')
-const selectedProperty = ref(null)
-const isModalOpen = ref(false)
+const modalOpen = ref(false)
+const editId = ref('')
+const regenerateId = ref('')
+const form = reactive({
+  name: '',
+  category: 'apartment',
+  location: '',
+  unitsCount: 1,
+})
 
-const name = ref('')
-const location = ref('')
-const unitsCount = ref('')
-
-const nameError = ref('')
-const locationError = ref('')
-
-const filtered = computed(() => {
-  const term = search.value.trim().toLowerCase()
-  if (!term) return store.items
-  return store.items.filter(
-    (p) =>
-      p.name.toLowerCase().includes(term) ||
-      p.location.toLowerCase().includes(term),
-  )
+const landlordId = computed(() => auth.currentUser.id)
+const myProperties = computed(() => propertiesStore.items.filter((property) => property.landlordId === landlordId.value))
+const columns = [
+  { key: 'name', label: 'Property' },
+  { key: 'category', label: 'Category' },
+  { key: 'location', label: 'Location' },
+  { key: 'units', label: 'Units' },
+  { key: 'actions', label: 'Actions' },
+]
+const regenerateOpen = computed({
+  get: () => Boolean(regenerateId.value),
+  set: (value) => {
+    if (!value) {
+      regenerateId.value = ''
+    }
+  },
 })
 
 function openCreate() {
-  selectedProperty.value = null
-  name.value = ''
-  location.value = ''
-  unitsCount.value = ''
-  nameError.value = ''
-  locationError.value = ''
-  isModalOpen.value = true
+  editId.value = ''
+  form.name = ''
+  form.category = 'apartment'
+  form.location = ''
+  form.unitsCount = 1
+  modalOpen.value = true
 }
 
-function openEdit(property) {
-  selectedProperty.value = property
-  name.value = property.name
-  location.value = property.location
-  unitsCount.value = property.unitsCount || ''
-  nameError.value = ''
-  locationError.value = ''
-  isModalOpen.value = true
+function openEdit(row) {
+  editId.value = row.id
+  form.name = row.name
+  form.category = row.category
+  form.location = row.location
+  form.unitsCount = row.unitsCount
+  modalOpen.value = true
 }
 
-function validate() {
-  nameError.value = ''
-  locationError.value = ''
-  let ok = true
-  if (!name.value.trim()) {
-    nameError.value = 'Please provide a property name tenants will recognise.'
-    ok = false
-  }
-  if (!location.value.trim()) {
-    locationError.value = 'Please specify where the property is located.'
-    ok = false
-  }
-  return ok
-}
-
-function save() {
-  if (!validate()) return
-  const payload = {
-    name: name.value.trim(),
-    location: location.value.trim(),
-    unitsCount: unitsCount.value ? Number(unitsCount.value) : undefined,
-  }
-  if (selectedProperty.value) {
-    store.edit(selectedProperty.value.id, payload)
+function saveProperty() {
+  const actor = { role: auth.role, id: auth.currentUser.id }
+  if (editId.value) {
+    propertiesStore.updateProperty(editId.value, { ...form }, actor)
   } else {
-    store.add(payload)
+    propertiesStore.createProperty(
+      {
+        landlordId: landlordId.value,
+        ...form,
+      },
+      actor,
+    )
   }
-  isModalOpen.value = false
+  modalOpen.value = false
 }
 
-function confirmRemove(property) {
-  if (window.confirm(`Delete ${property.name}? This cannot be undone.`)) {
-    store.removeById(property.id)
-  }
+function propertyUnits(propertyId) {
+  return unitsStore.items.filter((unit) => unit.propertyId === propertyId)
+}
+
+function regenerate(propertyId) {
+  propertiesStore.regenerateUnits(propertyId, { role: auth.role, id: auth.currentUser.id })
+  regenerateId.value = ''
 }
 </script>
 
 <template>
-  <section aria-labelledby="landlord-properties-title">
-    <PageHeader
-      id="landlord-properties-title"
-      title="Properties"
-      subtitle="Manage the buildings and units you are responsible for."
-    />
-
-    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <label class="flex-1 text-sm">
-        <span class="sr-only">Search properties</span>
-        <input
-          v-model="search"
-          type="search"
-          placeholder="Search by name or location"
-          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-      </label>
-      <button
-        type="button"
-        class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-        @click="openCreate"
-      >
+  <section class="space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-4 rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
+      <div>
+        <h1 class="text-3xl font-semibold text-slate-950">
+          Properties and unit automation
+        </h1>
+      </div>
+      <button type="button" class="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white" @click="openCreate">
         Add property
       </button>
     </div>
 
-    <div v-if="!store.items.length" class="mt-4">
-      <EmptyState
-        title="No properties yet"
-        description="Start by adding your first property so you can assign tenants and track rent."
-        action-label="Add property"
-        @action="openCreate"
-      />
-    </div>
+    <EmptyState
+      v-if="!myProperties.length"
+      :image-src="emptyTenants"
+      title="No properties yet"
+      description="Create your first property to generate units and start assigning tenants."
+      action-label="Add property"
+      @action="openCreate"
+    />
 
-    <div v-else>
-      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table class="min-w-full text-left text-sm">
-          <thead class="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
-            <tr>
-              <th scope="col" class="px-3 py-2">Name</th>
-              <th scope="col" class="px-3 py-2">Location</th>
-              <th scope="col" class="px-3 py-2">Units</th>
-              <th scope="col" class="px-3 py-2">Created</th>
-              <th scope="col" class="px-3 py-2 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="property in filtered"
-              :key="property.id"
-              class="border-t border-slate-100 hover:bg-slate-50"
+    <Table v-else :columns="columns" :rows="myProperties">
+      <template #name="{ row }">
+        <div>
+          <p class="font-medium text-slate-950">{{ row.name }}</p>
+          <p class="text-xs text-slate-500">Prefix {{ row.prefixCode }}</p>
+        </div>
+      </template>
+      <template #category="{ row }">
+        <Badge :kind="row.category" />
+      </template>
+      <template #units="{ row }">
+        <div class="space-y-2">
+          <p class="text-sm font-medium text-slate-950">{{ propertyUnits(row.id).length }} generated unit(s)</p>
+          <div class="flex flex-wrap gap-2">
+            <span
+              v-for="unit in propertyUnits(row.id)"
+              :key="unit.id"
+              class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600"
             >
-              <td class="px-3 py-2 text-slate-900">
-                {{ property.name }}
-              </td>
-              <td class="px-3 py-2 text-slate-700">
-                {{ property.location }}
-              </td>
-              <td class="px-3 py-2 text-slate-700">
-                {{ property.unitsCount ?? '—' }}
-              </td>
-              <td class="px-3 py-2 text-xs text-slate-500">
-                {{ property.createdAt?.slice(0, 10) }}
-              </td>
-              <td class="px-3 py-2 text-right">
-                <div class="inline-flex gap-2">
-                  <button
-                    type="button"
-                    class="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-                    @click="openEdit(property)"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    class="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
-                    @click="confirmRemove(property)"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              {{ unit.code }} - {{ unit.status }}
+            </span>
+          </div>
+        </div>
+      </template>
+      <template #actions="{ row }">
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="rounded-full border border-slate-200 px-3 py-1 text-xs" @click="openEdit(row)">
+            Edit
+          </button>
+          <button type="button" class="rounded-full border border-slate-200 px-3 py-1 text-xs" @click="regenerateId = row.id">
+            Regenerate units
+          </button>
+        </div>
+      </template>
+    </Table>
+
+    <Modal v-model="modalOpen" :title="editId ? 'Edit property' : 'Create property'">
+      <div class="grid gap-4 md:grid-cols-2">
+        <FormField field-id="property-name" label="Property name" hint="The prefix code stays stable until you regenerate units.">
+          <input id="property-name" v-model="form.name" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+        </FormField>
+        <FormField field-id="property-category" label="Category">
+          <select id="property-category" v-model="form.category" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm">
+            <option value="apartment">Apartment</option>
+            <option value="family_house">Family house</option>
+            <option value="ghetto">Ghetto</option>
+          </select>
+        </FormField>
+        <FormField field-id="property-location" label="Location">
+          <input id="property-location" v-model="form.location" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+        </FormField>
+        <FormField field-id="units-count" label="Units count" hint="Family houses are forced to one unit automatically.">
+          <input id="units-count" v-model.number="form.unitsCount" :disabled="form.category === 'family_house'" type="number" min="1" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+        </FormField>
       </div>
-    </div>
-
-    <BaseModal v-model="isModalOpen" :title="selectedProperty ? 'Edit property' : 'Add property'">
-      <form
-        class="space-y-3"
-        @submit.prevent="save"
-      >
-        <div>
-          <label for="property-name" class="block text-sm font-medium text-slate-800">Name</label>
-          <input
-            id="property-name"
-            v-model="name"
-            type="text"
-            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            :aria-invalid="nameError ? 'true' : 'false'"
-            aria-describedby="property-name-error"
-          />
-          <p
-            v-if="nameError"
-            id="property-name-error"
-            class="mt-1 text-xs text-red-700"
-            role="alert"
-          >
-            {{ nameError }}
-          </p>
-        </div>
-
-        <div>
-          <label for="property-location" class="block text-sm font-medium text-slate-800">Location</label>
-          <input
-            id="property-location"
-            v-model="location"
-            type="text"
-            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            :aria-invalid="locationError ? 'true' : 'false'"
-            aria-describedby="property-location-error"
-          />
-          <p
-            v-if="locationError"
-            id="property-location-error"
-            class="mt-1 text-xs text-red-700"
-            role="alert"
-          >
-            {{ locationError }}
-          </p>
-        </div>
-
-        <div>
-          <label for="property-units" class="block text-sm font-medium text-slate-800"
-            >Approximate number of units (optional)</label
-          >
-          <input
-            id="property-units"
-            v-model="unitsCount"
-            type="number"
-            min="0"
-            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-      </form>
-
-      <template #footer>
-        <button
-          type="button"
-          class="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
-          @click="isModalOpen = false"
-        >
+      <div class="flex justify-end gap-3">
+        <button type="button" class="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm" @click="modalOpen = false">
           Cancel
         </button>
-        <button
-          type="button"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-          @click="save"
-        >
-          Save
+        <button type="button" class="rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white" @click="saveProperty">
+          Save property
         </button>
-      </template>
-    </BaseModal>
+      </div>
+    </Modal>
+
+    <Modal v-model="regenerateOpen" title="Regenerate units">
+      <p class="text-sm leading-6 text-slate-600">
+        Regenerating units keeps the stable prefix code but rebuilds the numbered unit list. This only works when the
+        property has no occupied units.
+      </p>
+      <div class="flex justify-end gap-3">
+        <button type="button" class="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm" @click="regenerateId = ''">
+          Cancel
+        </button>
+        <button type="button" class="rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white" @click="regenerate(regenerateId)">
+          Regenerate
+        </button>
+      </div>
+    </Modal>
   </section>
 </template>
-

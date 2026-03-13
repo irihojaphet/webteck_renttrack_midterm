@@ -1,185 +1,111 @@
 <script setup>
 import { computed } from 'vue'
-import PageHeader from '../../components/PageHeader.vue'
+import Badge from '../../components/Badge.vue'
 import StatCard from '../../components/StatCard.vue'
-import BadgeStatus from '../../components/BadgeStatus.vue'
-import { useAuthStore } from '../../stores/auth'
-import { useTenantsStore } from '../../stores/tenants'
-import { useLeasesStore } from '../../stores/leases'
+import Table from '../../components/Table.vue'
+import { useSessionEntities } from '../../composables/useSessionEntities'
+import { usePaymentProofsStore } from '../../stores/paymentProofs'
 import { usePaymentsStore } from '../../stores/payments'
 import { useTicketsStore } from '../../stores/tickets'
-import { usePropertiesStore } from '../../stores/properties'
 
-const auth = useAuthStore()
-const tenantsStore = useTenantsStore()
-const leasesStore = useLeasesStore()
+const { currentTenant, currentLease, currentProperty, currentUnit } = useSessionEntities()
 const paymentsStore = usePaymentsStore()
+const paymentProofsStore = usePaymentProofsStore()
 const ticketsStore = useTicketsStore()
-const propertiesStore = usePropertiesStore()
-
-const tenantRecord = computed(() =>
-  tenantsStore.items.find((t) => t.email === auth.currentUser?.email) || null,
-)
-
-const activeLease = computed(() =>
-  tenantRecord.value
-    ? leasesStore.items.find((l) => l.tenantId === tenantRecord.value.id && l.status === 'active') || null
-    : null,
-)
-
-const currentProperty = computed(() =>
-  activeLease.value ? propertiesStore.byId.get(activeLease.value.propertyId) || null : null,
-)
 
 const myPayments = computed(() =>
-  tenantRecord.value
-    ? paymentsStore.items
-        .filter((p) => p.tenantId === tenantRecord.value.id)
-        .sort((a, b) => (a.month === b.month ? 0 : a.month < b.month ? 1 : -1))
-    : [],
+  paymentsStore.items
+    .filter((payment) => payment.tenantId === currentTenant.value?.id)
+    .sort((a, b) => b.month.localeCompare(a.month)),
 )
-
-const myTickets = computed(() =>
-  tenantRecord.value
-    ? ticketsStore.items.filter((t) => t.tenantId === tenantRecord.value.id)
-    : [],
+const myProofs = computed(() =>
+  paymentProofsStore.items
+    .filter((proof) => proof.tenantId === currentTenant.value?.id)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
 )
-
-const openTicketsCount = computed(() => myTickets.value.filter((t) => t.status === 'Open').length)
+const myTickets = computed(() => ticketsStore.items.filter((ticket) => ticket.tenantId === currentTenant.value?.id))
+const paymentColumns = [
+  { key: 'month', label: 'Month' },
+  { key: 'amountPaid', label: 'Amount' },
+  { key: 'status', label: 'Status' },
+]
 </script>
 
 <template>
-  <section aria-labelledby="tenant-dashboard-title">
-    <PageHeader
-      id="tenant-dashboard-title"
-      title="Your rent and maintenance"
-      :subtitle="
-        tenantRecord
-          ? `Welcome back, ${tenantRecord.fullName}. Here’s a quick view of your rent and maintenance tickets.`
-          : 'Welcome back. This dashboard summarises your current lease, recent payments, and maintenance tickets.'
-      "
-    />
-
-    <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <StatCard
-        label="Monthly rent"
-        :value="
-          activeLease
-            ? Number(activeLease.monthlyRent).toLocaleString() + ' RWF'
-            : 'No active lease'
-        "
-        :hint="activeLease ? 'Amount expected each month under your current lease.' : 'Ask your landlord to confirm your lease details.'"
-      />
-      <StatCard
-        label="Payments recorded"
-        :value="myPayments.length"
-        hint="Total number of rent payments visible to you."
-      />
-      <StatCard
-        label="Open maintenance tickets"
-        :value="openTicketsCount"
-        hint="Tickets that are still marked as Open."
-      />
+  <section class="space-y-6">
+    <div class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
+      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-indigo-600">
+        Tenant overview
+      </p>
+      <h1 class="mt-3 text-3xl font-semibold text-slate-950">
+        Follow your lease, rent proof, and maintenance requests.
+      </h1>
     </div>
 
-    <section class="mb-6 rounded-lg border border-slate-200 bg-white p-4">
-      <h2 class="text-sm font-semibold text-slate-900">
-        Current home
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <StatCard label="Home" :value="currentProperty?.name || 'No active lease'" tone="indigo" />
+      <StatCard label="Unit" :value="currentUnit?.code || 'Not assigned'" tone="slate" />
+      <StatCard label="Monthly rent" :value="currentLease ? `${Number(currentLease.monthlyRent).toLocaleString()} RWF` : '0 RWF'" tone="emerald" />
+      <StatCard label="Pending proofs" :value="myProofs.filter((proof) => proof.status === 'Pending').length" tone="amber" />
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-[1.05fr,0.95fr]">
+      <section class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-xl font-semibold text-slate-950">
+          Active lease
+        </h2>
+        <div v-if="currentLease" class="mt-4 space-y-3 text-sm text-slate-600">
+          <p>
+            <span class="font-medium text-slate-950">Property:</span>
+            {{ currentProperty?.name }}
+          </p>
+          <p>
+            <span class="font-medium text-slate-950">Location:</span>
+            {{ currentProperty?.location }}
+          </p>
+          <p>
+            <span class="font-medium text-slate-950">Unit:</span>
+            {{ currentUnit?.code }}
+          </p>
+          <p>
+            <span class="font-medium text-slate-950">Start date:</span>
+            {{ currentLease.startDate }}
+          </p>
+        </div>
+      </section>
+
+      <section class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-xl font-semibold text-slate-950">
+          My tickets
+        </h2>
+        <div class="mt-4 space-y-3">
+          <article v-for="ticket in myTickets" :key="ticket.id" class="rounded-[24px] bg-slate-50 p-4">
+            <div class="flex items-center justify-between gap-3">
+              <p class="font-medium text-slate-950">{{ ticket.title }}</p>
+              <Badge :kind="ticket.status" />
+            </div>
+            <p class="mt-2 text-sm leading-6 text-slate-600">
+              {{ ticket.description }}
+            </p>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <section class="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
+      <h2 class="text-xl font-semibold text-slate-950">
+        Payment history
       </h2>
-      <p v-if="!activeLease || !currentProperty" class="mt-2 text-sm text-slate-600">
-        We could not find an active lease linked to your account. If you believe this is a mistake, please contact
-        your landlord.
-      </p>
-      <div v-else class="mt-2 text-sm text-slate-700">
-        <p class="font-medium text-slate-900">
-          {{ currentProperty.name }}
-        </p>
-        <p class="text-slate-600">
-          {{ currentProperty.location }}
-        </p>
-        <p class="mt-1 text-xs text-slate-500">
-          Lease started on
-          <span class="font-medium">{{ activeLease.startDate }}</span>
-        </p>
+      <div class="mt-4">
+        <Table :columns="paymentColumns" :rows="myPayments">
+          <template #amountPaid="{ row }">
+            {{ Number(row.amountPaid).toLocaleString() }} RWF
+          </template>
+          <template #status="{ row }">
+            <Badge :kind="row.status" />
+          </template>
+        </Table>
       </div>
-    </section>
-
-    <section class="grid gap-6 lg:grid-cols-2">
-      <article class="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 class="text-sm font-semibold text-slate-900">
-          Recent payments
-        </h2>
-        <p v-if="!myPayments.length" class="mt-2 text-sm text-slate-600">
-          You have no payments recorded yet.
-        </p>
-        <div v-else class="mt-3 overflow-x-auto">
-          <table class="min-w-full text-left text-sm">
-            <thead class="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
-              <tr>
-                <th scope="col" class="px-3 py-2">Month</th>
-                <th scope="col" class="px-3 py-2">Amount</th>
-                <th scope="col" class="px-3 py-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="payment in myPayments.slice(0, 5)"
-                :key="payment.id"
-                class="border-t border-slate-100 hover:bg-slate-50"
-              >
-                <td class="px-3 py-2 text-slate-900">
-                  {{ payment.month }}
-                </td>
-                <td class="px-3 py-2 text-slate-700">
-                  {{ Number(payment.amountPaid).toLocaleString() }} RWF
-                </td>
-                <td class="px-3 py-2">
-                  <BadgeStatus :kind="payment.status" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </article>
-
-      <article class="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 class="text-sm font-semibold text-slate-900">
-          Your maintenance tickets
-        </h2>
-        <p v-if="!myTickets.length" class="mt-2 text-sm text-slate-600">
-          You have not submitted any maintenance tickets yet. Use the “My tickets” section to create one when
-          something needs attention.
-        </p>
-        <div v-else class="mt-3 overflow-x-auto">
-          <table class="min-w-full text-left text-sm">
-            <thead class="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
-              <tr>
-                <th scope="col" class="px-3 py-2">Created</th>
-                <th scope="col" class="px-3 py-2">Title</th>
-                <th scope="col" class="px-3 py-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="ticket in myTickets.slice(0, 5)"
-                :key="ticket.id"
-                class="border-t border-slate-100 hover:bg-slate-50"
-              >
-                <td class="px-3 py-2 text-xs text-slate-500">
-                  {{ ticket.createdAt?.slice(0, 10) }}
-                </td>
-                <td class="px-3 py-2 text-slate-900">
-                  {{ ticket.title }}
-                </td>
-                <td class="px-3 py-2">
-                  <BadgeStatus :kind="ticket.status" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </article>
     </section>
   </section>
 </template>
-

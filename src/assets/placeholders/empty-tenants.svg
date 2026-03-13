@@ -1,0 +1,9 @@
+<!-- Use: simple illustration of apartment/building, muted colors, no busy background. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240" fill="none">
+  <rect width="320" height="240" rx="24" fill="#F8FAFC"/>
+  <circle cx="104" cy="96" r="26" fill="#E0E7FF"/>
+  <circle cx="206" cy="104" r="32" fill="#DBEAFE"/>
+  <rect x="76" y="144" width="64" height="14" rx="7" fill="#A5B4FC"/>
+  <rect x="160" y="154" width="82" height="14" rx="7" fill="#60A5FA"/>
+  <rect x="90" y="188" width="140" height="12" rx="6" fill="#CBD5E1"/>
+</svg>

@@ -1,0 +1,8 @@
+<!-- Use: simple illustration of apartment/building, muted colors, no busy background. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240" fill="none">
+  <rect width="320" height="240" rx="24" fill="#F8FAFC"/>
+  <rect x="72" y="52" width="176" height="128" rx="20" fill="#ECFDF5"/>
+  <path d="M118 106h84" stroke="#10B981" stroke-width="14" stroke-linecap="round"/>
+  <path d="M118 138h56" stroke="#34D399" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="212" cy="132" r="18" fill="#A7F3D0"/>
+</svg>
