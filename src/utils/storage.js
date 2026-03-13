@@ -1,6 +1,6 @@
 const ROOT_KEY = 'renttrack_midterm'
 
-function readRoot() {
+export function readRoot() {
   try {
     const raw = window.localStorage.getItem(ROOT_KEY)
     if (!raw) return {}
@@ -12,7 +12,7 @@ function readRoot() {
   }
 }
 
-function writeRoot(root) {
+export function writeRoot(root) {
   window.localStorage.setItem(ROOT_KEY, JSON.stringify(root))
 }
 
@@ -42,3 +42,12 @@ export function setValue(key, value) {
   writeRoot(root)
 }
 
+export function removeValue(key) {
+  const root = readRoot()
+  delete root[key]
+  writeRoot(root)
+}
+
+export function resetStorage(root = {}) {
+  writeRoot(root)
+}
