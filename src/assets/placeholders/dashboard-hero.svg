@@ -1,0 +1,11 @@
+<!-- Use: simple illustration of apartment/building, muted colors, no busy background. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="320" viewBox="0 0 640 320" fill="none">
+  <rect width="640" height="320" rx="32" fill="#F8FAFC"/>
+  <path d="M80 244h120V108H80z" fill="#E0E7FF"/>
+  <path d="M238 244h100V74H238z" fill="#DBEAFE"/>
+  <path d="M376 244h178V134H376z" fill="#D1FAE5"/>
+  <path d="M108 140h22v22h-22zm40 0h22v22h-22zm-40 42h22v22h-22zm40 42h22v22h-22z" fill="#818CF8"/>
+  <path d="M268 104h20v20h-20zm0 36h20v20h-20zm40-36h20v20h-20zm40 36h20v20h-20z" fill="#60A5FA"/>
+  <path d="M412 168h32v32h-32zm54 0h32v32h-32zm54 0h32v32h-32z" fill="#34D399"/>
+  <path d="M64 268h512" stroke="#CBD5E1" stroke-width="12" stroke-linecap="round"/>
+</svg>

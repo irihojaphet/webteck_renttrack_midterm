@@ -1,335 +1,175 @@
 <script setup>
-import { computed, ref } from 'vue'
-import PageHeader from '../../components/PageHeader.vue'
+import { computed, reactive, ref, watch } from 'vue'
 import EmptyState from '../../components/EmptyState.vue'
-import BaseModal from '../../components/BaseModal.vue'
-import { useTenantsStore } from '../../stores/tenants'
+import FormField from '../../components/FormField.vue'
+import Modal from '../../components/Modal.vue'
+import Table from '../../components/Table.vue'
+import emptyTenants from '../../assets/placeholders/empty-tenants.svg'
+import { useAuthStore } from '../../stores/auth'
+import { useLeasesStore } from '../../stores/leases'
 import { usePropertiesStore } from '../../stores/properties'
+import { useTenantsStore } from '../../stores/tenants'
+import { useUnitsStore } from '../../stores/units'
 
-const tenantsStore = useTenantsStore()
+const auth = useAuthStore()
 const propertiesStore = usePropertiesStore()
+const unitsStore = useUnitsStore()
+const tenantsStore = useTenantsStore()
+const leasesStore = useLeasesStore()
 
-const search = ref('')
-const selectedTenant = ref(null)
-const isModalOpen = ref(false)
-
-const fullName = ref('')
-const phone = ref('')
-const email = ref('')
-const propertyId = ref('')
-const unitLabel = ref('')
-
-const fullNameError = ref('')
-const emailError = ref('')
-const propertyError = ref('')
-
-const filteredTenants = computed(() => {
-  const term = search.value.trim().toLowerCase()
-  if (!term) return tenantsStore.items
-  return tenantsStore.items.filter((t) => {
-    const property = propertiesStore.byId.get(t.propertyId)
-    const haystack = [
-      t.fullName,
-      t.email,
-      t.phone,
-      t.unitLabel,
-      property ? property.name : '',
-      property ? property.location : '',
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase()
-    return haystack.includes(term)
-  })
+const modalOpen = ref(false)
+const form = reactive({
+  fullName: '',
+  email: '',
+  password: '',
+  phone: '',
+  propertyId: '',
+  unitId: '',
+  monthlyRent: 0,
+  startDate: new Date().toISOString().slice(0, 10),
 })
 
-function openCreate() {
-  selectedTenant.value = null
-  fullName.value = ''
-  phone.value = ''
-  email.value = ''
-  propertyId.value = propertiesStore.items[0]?.id || ''
-  unitLabel.value = ''
-  fullNameError.value = ''
-  emailError.value = ''
-  propertyError.value = ''
-  isModalOpen.value = true
+const landlordId = computed(() => auth.currentUser.id)
+const myProperties = computed(() => propertiesStore.items.filter((property) => property.landlordId === landlordId.value))
+const availableUnits = computed(() => unitsStore.items.filter((unit) => unit.propertyId === form.propertyId && unit.status === 'Available'))
+const myTenants = computed(() =>
+  tenantsStore.items
+    .filter((tenant) => tenant.landlordId === landlordId.value)
+    .map((tenant) => ({
+      ...tenant,
+      property: propertiesStore.items.find((property) => property.id === tenant.propertyId),
+      unit: unitsStore.items.find((unit) => unit.id === tenant.unitId),
+      lease: leasesStore.items.find((lease) => lease.tenantId === tenant.id && lease.status === 'active'),
+    })),
+)
+
+watch(
+  () => form.propertyId,
+  () => {
+    form.unitId = ''
+  },
+)
+
+const columns = [
+  { key: 'fullName', label: 'Tenant' },
+  { key: 'contact', label: 'Contact' },
+  { key: 'assignment', label: 'Assignment' },
+  { key: 'rent', label: 'Monthly rent' },
+]
+
+function resetForm() {
+  form.fullName = ''
+  form.email = ''
+  form.password = ''
+  form.phone = ''
+  form.propertyId = ''
+  form.unitId = ''
+  form.monthlyRent = 0
+  form.startDate = new Date().toISOString().slice(0, 10)
 }
 
-function openEdit(tenant) {
-  selectedTenant.value = tenant
-  fullName.value = tenant.fullName
-  phone.value = tenant.phone || ''
-  email.value = tenant.email
-  propertyId.value = tenant.propertyId || propertiesStore.items[0]?.id || ''
-  unitLabel.value = tenant.unitLabel || ''
-  fullNameError.value = ''
-  emailError.value = ''
-  propertyError.value = ''
-  isModalOpen.value = true
-}
-
-function validate() {
-  fullNameError.value = ''
-  emailError.value = ''
-  propertyError.value = ''
-
-  let ok = true
-  if (!fullName.value.trim()) {
-    fullNameError.value = 'Please enter the tenant’s full name.'
-    ok = false
-  }
-  if (!email.value.trim()) {
-    emailError.value = 'Please enter the tenant’s email address.'
-    ok = false
-  }
-  if (!propertyId.value) {
-    propertyError.value = 'Please assign the tenant to a property.'
-    ok = false
-  }
-  return ok
-}
-
-function save() {
-  if (!validate()) return
-  const payload = {
-    fullName: fullName.value.trim(),
-    phone: phone.value.trim() || undefined,
-    email: email.value.trim(),
-    propertyId: propertyId.value,
-    unitLabel: unitLabel.value.trim() || undefined,
-  }
-  if (selectedTenant.value) {
-    tenantsStore.edit(selectedTenant.value.id, payload)
-  } else {
-    tenantsStore.add(payload)
-  }
-  isModalOpen.value = false
-}
-
-function confirmRemove(tenant) {
-  if (
-    window.confirm(
-      `Remove ${tenant.fullName}? Any existing leases will remain but you will no longer see this tenant in the list.`,
-    )
-  ) {
-    tenantsStore.removeById(tenant.id)
-  }
+function createTenant() {
+  tenantsStore.createTenantWithLease(
+    {
+      landlordId: landlordId.value,
+      ...form,
+    },
+    { role: auth.role, id: auth.currentUser.id },
+  )
+  modalOpen.value = false
+  resetForm()
 }
 </script>
 
 <template>
-  <section aria-labelledby="landlord-tenants-title">
-    <PageHeader
-      id="landlord-tenants-title"
-      title="Tenants"
-      subtitle="Keep track of who lives in each unit and how to contact them."
-    />
-
-    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <label class="flex-1 text-sm">
-        <span class="sr-only">Search tenants</span>
-        <input
-          v-model="search"
-          type="search"
-          placeholder="Search by name, email, phone, property, or unit"
-          class="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-      </label>
-      <button
-        type="button"
-        class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-        @click="openCreate"
-      >
+  <section class="space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-4 rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm">
+      <div>
+        <h1 class="text-3xl font-semibold text-slate-950">
+          Tenants and unit assignment
+        </h1>
+        <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
+          New tenants must be assigned to a property and one available unit. Creating the tenant also creates an active
+          lease and marks the unit occupied.
+        </p>
+      </div>
+      <button type="button" class="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white" @click="modalOpen = true">
         Add tenant
       </button>
     </div>
 
-    <div v-if="!tenantsStore.items.length" class="mt-4">
-      <EmptyState
-        title="No tenants yet"
-        description="Add your first tenant so you can create a lease and start tracking rent."
-        action-label="Add tenant"
-        @action="openCreate"
-      />
-    </div>
+    <EmptyState
+      v-if="!myTenants.length"
+      :image-src="emptyTenants"
+      title="No tenants assigned yet"
+      description="Add a tenant with an available unit to create the first active lease."
+      action-label="Add tenant"
+      @action="modalOpen = true"
+    />
 
-    <div v-else>
-      <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table class="min-w-full text-left text-sm">
-          <thead class="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
-            <tr>
-              <th scope="col" class="px-3 py-2">Name</th>
-              <th scope="col" class="px-3 py-2">Contact</th>
-              <th scope="col" class="px-3 py-2">Property / Unit</th>
-              <th scope="col" class="px-3 py-2">Created</th>
-              <th scope="col" class="px-3 py-2 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="tenant in filteredTenants"
-              :key="tenant.id"
-              class="border-t border-slate-100 hover:bg-slate-50"
-            >
-              <td class="px-3 py-2 text-slate-900">
-                {{ tenant.fullName }}
-              </td>
-              <td class="px-3 py-2 text-slate-700">
-                <p>{{ tenant.email }}</p>
-                <p v-if="tenant.phone" class="text-xs text-slate-500">
-                  {{ tenant.phone }}
-                </p>
-              </td>
-              <td class="px-3 py-2 text-slate-700">
-                <p>
-                  {{
-                    propertiesStore.byId.get(tenant.propertyId)?.name || 'Not assigned'
-                  }}
-                </p>
-                <p v-if="tenant.unitLabel" class="text-xs text-slate-500">
-                  Unit {{ tenant.unitLabel }}
-                </p>
-              </td>
-              <td class="px-3 py-2 text-xs text-slate-500">
-                {{ tenant.createdAt?.slice(0, 10) }}
-              </td>
-              <td class="px-3 py-2 text-right">
-                <div class="inline-flex gap-2">
-                  <button
-                    type="button"
-                    class="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-                    @click="openEdit(tenant)"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    class="rounded-md border border-red-200 px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
-                    @click="confirmRemove(tenant)"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <BaseModal v-model="isModalOpen" :title="selectedTenant ? 'Edit tenant' : 'Add tenant'">
-      <form
-        class="space-y-3"
-        @submit.prevent="save"
-      >
+    <Table v-else :columns="columns" :rows="myTenants">
+      <template #contact="{ row }">
         <div>
-          <label for="tenant-name" class="block text-sm font-medium text-slate-800">Full name</label>
-          <input
-            id="tenant-name"
-            v-model="fullName"
-            type="text"
-            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            :aria-invalid="fullNameError ? 'true' : 'false'"
-            aria-describedby="tenant-name-error"
-          />
-          <p
-            v-if="fullNameError"
-            id="tenant-name-error"
-            class="mt-1 text-xs text-red-700"
-            role="alert"
-          >
-            {{ fullNameError }}
-          </p>
+          <p>{{ row.email }}</p>
+          <p class="text-xs text-slate-500">{{ row.phone }}</p>
         </div>
-
+      </template>
+      <template #assignment="{ row }">
         <div>
-          <label for="tenant-email" class="block text-sm font-medium text-slate-800">Email</label>
-          <input
-            id="tenant-email"
-            v-model="email"
-            type="email"
-            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            :aria-invalid="emailError ? 'true' : 'false'"
-            aria-describedby="tenant-email-error"
-          />
-          <p
-            v-if="emailError"
-            id="tenant-email-error"
-            class="mt-1 text-xs text-red-700"
-            role="alert"
-          >
-            {{ emailError }}
-          </p>
+          <p class="font-medium text-slate-950">{{ row.property?.name }}</p>
+          <p class="text-xs text-slate-500">{{ row.unit?.code }}</p>
         </div>
+      </template>
+      <template #rent="{ row }">
+        {{ Number(row.lease?.monthlyRent || 0).toLocaleString() }} RWF
+      </template>
+    </Table>
 
-        <div>
-          <label for="tenant-phone" class="block text-sm font-medium text-slate-800">Phone (optional)</label>
-          <input
-            id="tenant-phone"
-            v-model="phone"
-            type="tel"
-            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label for="tenant-property" class="block text-sm font-medium text-slate-800">Property</label>
-          <select
-            id="tenant-property"
-            v-model="propertyId"
-            class="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            :aria-invalid="propertyError ? 'true' : 'false'"
-            aria-describedby="tenant-property-error"
-          >
-            <option value="" disabled>Select a property</option>
-            <option
-              v-for="property in propertiesStore.items"
-              :key="property.id"
-              :value="property.id"
-            >
-              {{ property.name }} — {{ property.location }}
+    <Modal v-model="modalOpen" title="Add tenant and create lease">
+      <div class="grid gap-4 md:grid-cols-2">
+        <FormField field-id="tenant-name" label="Full name">
+          <input id="tenant-name" v-model="form.fullName" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+        </FormField>
+        <FormField field-id="tenant-email" label="Email">
+          <input id="tenant-email" v-model="form.email" type="email" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+        </FormField>
+        <FormField field-id="tenant-password" label="Password">
+          <input id="tenant-password" v-model="form.password" type="password" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+        </FormField>
+        <FormField field-id="tenant-phone" label="Phone">
+          <input id="tenant-phone" v-model="form.phone" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+        </FormField>
+        <FormField field-id="tenant-property" label="Property">
+          <select id="tenant-property" v-model="form.propertyId" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm">
+            <option value="">Select property</option>
+            <option v-for="property in myProperties" :key="property.id" :value="property.id">
+              {{ property.name }}
             </option>
           </select>
-          <p
-            v-if="propertyError"
-            id="tenant-property-error"
-            class="mt-1 text-xs text-red-700"
-            role="alert"
-          >
-            {{ propertyError }}
-          </p>
-        </div>
-
-        <div>
-          <label for="tenant-unit" class="block text-sm font-medium text-slate-800">Unit label (optional)</label>
-          <input
-            id="tenant-unit"
-            v-model="unitLabel"
-            type="text"
-            class="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="e.g. A-2 or 3B"
-          />
-        </div>
-      </form>
-
-      <template #footer>
-        <button
-          type="button"
-          class="rounded-md border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-2"
-          @click="isModalOpen = false"
-        >
+        </FormField>
+        <FormField field-id="tenant-unit" label="Available unit">
+          <select id="tenant-unit" v-model="form.unitId" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm">
+            <option value="">Select unit</option>
+            <option v-for="unit in availableUnits" :key="unit.id" :value="unit.id">
+              {{ unit.code }}
+            </option>
+          </select>
+        </FormField>
+        <FormField field-id="tenant-rent" label="Monthly rent">
+          <input id="tenant-rent" v-model.number="form.monthlyRent" type="number" min="0" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+        </FormField>
+        <FormField field-id="tenant-start" label="Lease start date">
+          <input id="tenant-start" v-model="form.startDate" type="date" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+        </FormField>
+      </div>
+      <div class="flex justify-end gap-3">
+        <button type="button" class="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm" @click="modalOpen = false">
           Cancel
         </button>
-        <button
-          type="button"
-          class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
-          @click="save"
-        >
-          Save
+        <button type="button" class="rounded-2xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white" @click="createTenant">
+          Save tenant
         </button>
-      </template>
-    </BaseModal>
+      </div>
+    </Modal>
   </section>
 </template>
-

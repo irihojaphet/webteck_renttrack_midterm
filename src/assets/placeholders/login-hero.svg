@@ -1,0 +1,19 @@
+<!-- Use: simple illustration of apartment/building, muted colors, no busy background. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="720" viewBox="0 0 960 720" fill="none">
+  <rect width="960" height="720" rx="48" fill="url(#a)"/>
+  <circle cx="787" cy="147" r="86" fill="#E0E7FF"/>
+  <path d="M144 520h210V278H144z" fill="#F8FAFC"/>
+  <path d="M392 520h172V216H392z" fill="#EEF2FF"/>
+  <path d="M602 520h214V336H602z" fill="#F8FAFC"/>
+  <path d="M180 320h42v42h-42zm0 82h42v42h-42zm96-82h42v42h-42zm0 82h42v42h-42z" fill="#C7D2FE"/>
+  <path d="M430 264h42v42h-42zm0 78h42v42h-42zm54-78h42v42h-42zm0 78h42v42h-42z" fill="#A5B4FC"/>
+  <path d="M646 382h44v44h-44zm78 0h44v44h-44zm-78 84h44v44h-44zm78 84h44v44h-44z" fill="#CBD5E1"/>
+  <path d="M120 562h720" stroke="#94A3B8" stroke-width="18" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="a" x1="64" y1="54" x2="919" y2="668" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FAFC"/>
+      <stop offset="0.52" stop-color="#EEF2FF"/>
+      <stop offset="1" stop-color="#ECFDF5"/>
+    </linearGradient>
+  </defs>
+</svg>
