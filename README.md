@@ -231,6 +231,7 @@ Additional project documents are available in:
 
 - [`USER_MANUAL.md`](./USER_MANUAL.md)
 - [`docs/REPORT.md`](./docs/REPORT.md)
+- [`docs/TECHNICAL_WALKTHROUGH.md`](./docs/TECHNICAL_WALKTHROUGH.md)
 - [`docs/hcd.md`](./docs/hcd.md)
 - [`docs/security_threat_model.md`](./docs/security_threat_model.md)
 - [`docs/accessibility.md`](./docs/accessibility.md)
