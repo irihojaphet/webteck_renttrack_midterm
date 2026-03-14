@@ -76,6 +76,17 @@ export const usePropertiesStore = defineStore('properties', {
       })
     },
     removeProperty(id, actor) {
+      const occupiedUnits = useUnitsStore().items.some((unit) => unit.propertyId === id && unit.status === 'Occupied')
+      if (occupiedUnits) {
+        throw new Error('End the active leases before removing this property.')
+      }
+
+      const linkedTenants = getAll('tenants').some((tenant) => tenant.propertyId === id)
+      const linkedLeases = getAll('leases').some((lease) => lease.propertyId === id)
+      if (linkedTenants || linkedLeases) {
+        throw new Error('Remove the linked tenants and leases before deleting this property.')
+      }
+
       useUnitsStore().removeByProperty(id)
       remove('properties', id)
       this.refresh()
@@ -86,6 +97,10 @@ export const usePropertiesStore = defineStore('properties', {
         entityType: 'property',
         entityId: id,
         summary: 'Removed property and related units.',
+      })
+      useUiStore().toast({
+        title: 'Property removed',
+        message: 'The property and its generated units were deleted.',
       })
     },
   },

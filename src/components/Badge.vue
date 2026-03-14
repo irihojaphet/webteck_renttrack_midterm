@@ -1,4 +1,8 @@
 <script setup>
+defineOptions({
+  name: 'StatusBadge',
+})
+
 const props = defineProps({
   kind: {
     type: String,

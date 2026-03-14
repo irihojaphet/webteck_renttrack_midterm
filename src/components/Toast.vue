@@ -2,6 +2,10 @@
 import { storeToRefs } from 'pinia'
 import { useUiStore } from '../stores/ui'
 
+defineOptions({
+  name: 'ToastStack',
+})
+
 const uiStore = useUiStore()
 const { toasts } = storeToRefs(uiStore)
 </script>

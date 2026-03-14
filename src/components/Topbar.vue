@@ -5,6 +5,10 @@ import { useAuthStore } from '../stores/auth'
 import { useNotificationsStore } from '../stores/notifications'
 import { useThemeStore } from '../stores/theme'
 
+defineOptions({
+  name: 'AppTopbar',
+})
+
 const props = defineProps({
   title: {
     type: String,
@@ -67,6 +71,9 @@ function markAllRead() {
         <h2 class="mt-1 truncate text-2xl font-semibold text-slate-950">
           {{ title }}
         </h2>
+        <p v-if="props.subtitle" class="mt-1 truncate text-sm text-slate-500">
+          {{ props.subtitle }}
+        </p>
       </div>
 
       <div class="flex items-center gap-3">

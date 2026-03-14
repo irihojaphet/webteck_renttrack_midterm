@@ -1,4 +1,8 @@
 <script setup>
+defineOptions({
+  name: 'AppTable',
+})
+
 defineProps({
   columns: {
     type: Array,

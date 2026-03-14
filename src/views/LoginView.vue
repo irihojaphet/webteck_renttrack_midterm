@@ -2,6 +2,7 @@
 import { reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import loginHero from '../assets/placeholders/login-hero.jpg'
+import PasswordField from '../components/PasswordField.vue'
 import { useAuthStore } from '../stores/auth'
 import { useThemeStore } from '../stores/theme'
 
@@ -134,20 +135,13 @@ async function submit() {
               </p>
             </div>
 
-            <div class="space-y-1.5">
-              <label for="password" class="text-sm font-medium text-slate-800">Password</label>
-              <input
-                id="password"
-                v-model="credentials.password"
-                type="password"
-                class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-900"
-                :aria-invalid="errors.password ? 'true' : 'false'"
-                :aria-describedby="errors.password ? 'password-error' : undefined"
-              />
-              <p v-if="errors.password" id="password-error" class="text-xs text-rose-600" role="alert">
-                {{ errors.password }}
-              </p>
-            </div>
+            <PasswordField
+              v-model="credentials.password"
+              field-id="password"
+              label="Password"
+              :error="errors.password"
+              autocomplete="current-password"
+            />
 
             <button
               type="submit"
