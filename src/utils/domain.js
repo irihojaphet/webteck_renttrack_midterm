@@ -1,4 +1,4 @@
-export const STORAGE_VERSION = 'renttrack-2026-03-13-v1'
+export const STORAGE_VERSION = 'renttrack-2026-03-14-v2'
 
 export function createId(prefix) {
   const random = Math.random().toString(36).slice(2, 8)
