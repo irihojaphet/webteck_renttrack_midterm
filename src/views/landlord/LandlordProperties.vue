@@ -17,6 +17,7 @@ const unitsStore = useUnitsStore()
 const modalOpen = ref(false)
 const editId = ref('')
 const regenerateId = ref('')
+const actionError = ref('')
 const form = reactive({
   name: '',
   category: 'apartment',
@@ -44,6 +45,7 @@ const regenerateOpen = computed({
 
 function openCreate() {
   editId.value = ''
+  actionError.value = ''
   form.name = ''
   form.category = 'apartment'
   form.location = ''
@@ -52,6 +54,7 @@ function openCreate() {
 }
 
 function openEdit(row) {
+  actionError.value = ''
   editId.value = row.id
   form.name = row.name
   form.category = row.category
@@ -62,18 +65,23 @@ function openEdit(row) {
 
 function saveProperty() {
   const actor = { role: auth.role, id: auth.currentUser.id }
-  if (editId.value) {
-    propertiesStore.updateProperty(editId.value, { ...form }, actor)
-  } else {
-    propertiesStore.createProperty(
-      {
-        landlordId: landlordId.value,
-        ...form,
-      },
-      actor,
-    )
+  actionError.value = ''
+  try {
+    if (editId.value) {
+      propertiesStore.updateProperty(editId.value, { ...form }, actor)
+    } else {
+      propertiesStore.createProperty(
+        {
+          landlordId: landlordId.value,
+          ...form,
+        },
+        actor,
+      )
+    }
+    modalOpen.value = false
+  } catch (error) {
+    actionError.value = error.message || 'Unable to save property.'
   }
-  modalOpen.value = false
 }
 
 function propertyUnits(propertyId) {
@@ -81,8 +89,22 @@ function propertyUnits(propertyId) {
 }
 
 function regenerate(propertyId) {
-  propertiesStore.regenerateUnits(propertyId, { role: auth.role, id: auth.currentUser.id })
-  regenerateId.value = ''
+  actionError.value = ''
+  try {
+    propertiesStore.regenerateUnits(propertyId, { role: auth.role, id: auth.currentUser.id })
+    regenerateId.value = ''
+  } catch (error) {
+    actionError.value = error.message || 'Unable to regenerate units.'
+  }
+}
+
+function removeProperty(row) {
+  actionError.value = ''
+  try {
+    propertiesStore.removeProperty(row.id, { role: auth.role, id: auth.currentUser.id })
+  } catch (error) {
+    actionError.value = error.message || 'Unable to remove property.'
+  }
 }
 </script>
 
@@ -97,6 +119,10 @@ function regenerate(propertyId) {
       <button type="button" class="rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white" @click="openCreate">
         Add property
       </button>
+    </div>
+
+    <div v-if="actionError" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
+      {{ actionError }}
     </div>
 
     <EmptyState
@@ -140,11 +166,17 @@ function regenerate(propertyId) {
           <button type="button" class="rounded-full border border-slate-200 px-3 py-1 text-xs" @click="regenerateId = row.id">
             Regenerate units
           </button>
+          <button type="button" class="rounded-full border border-rose-200 px-3 py-1 text-xs text-rose-700" @click="removeProperty(row)">
+            Delete
+          </button>
         </div>
       </template>
     </Table>
 
     <Modal v-model="modalOpen" :title="editId ? 'Edit property' : 'Create property'">
+      <div v-if="actionError" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
+        {{ actionError }}
+      </div>
       <div class="grid gap-4 md:grid-cols-2">
         <FormField field-id="property-name" label="Property name" hint="The prefix code stays stable until you regenerate units.">
           <input id="property-name" v-model="form.name" class="block w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm" />

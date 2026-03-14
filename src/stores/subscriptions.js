@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { create, getAll, update } from '../utils/repo'
+import { create, getAll, remove, update } from '../utils/repo'
 import { addYears, getSubscriptionStatus, today } from '../utils/domain'
 import { useNotificationsStore } from './notifications'
 import { useAuditLogsStore } from './auditLogs'
@@ -159,6 +159,12 @@ export const useSubscriptionsStore = defineStore('subscriptions', {
         actorId,
         summary: `Demo payment simulated and ${selectedPlanType} subscription activated immediately.`,
       })
+    },
+    removeByLandlord(landlordId) {
+      const existing = this.items.find((item) => item.landlordId === landlordId)
+      if (!existing) return
+      remove('subscriptions', existing.id)
+      this.refresh()
     },
   },
 })

@@ -1,6 +1,10 @@
 <script setup>
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
+defineOptions({
+  name: 'BaseModal',
+})
+
 const props = defineProps({
   modelValue: {
     type: Boolean,

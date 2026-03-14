@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { create, getAll, update } from '../utils/repo'
+import { create, getAll, remove, update } from '../utils/repo'
 import { normalizeEmail } from '../utils/domain'
 import { useLeasesStore } from './leases'
 import { useAuditLogsStore } from './auditLogs'
@@ -79,7 +79,24 @@ export const useTenantsStore = defineStore('tenants', {
       return tenant
     },
     updateTenant(id, payload, actor) {
-      update('tenants', id, payload)
+      const tenant = this.items.find((item) => item.id === id)
+      if (!tenant) return
+
+      const normalizedEmail = payload.email ? normalizeEmail(payload.email) : tenant.email
+      if (
+        this.users.some((user) => user.id !== tenant.userId && normalizeEmail(user.email) === normalizedEmail)
+      ) {
+        throw new Error('A user with this tenant email already exists.')
+      }
+
+      update('tenants', id, {
+        ...payload,
+        email: normalizedEmail,
+      })
+      update('users', tenant.userId, {
+        fullName: payload.fullName || tenant.fullName,
+        email: normalizedEmail,
+      })
       this.refresh()
       useAuditLogsStore().log({
         actorRole: actor.role,
@@ -88,6 +105,41 @@ export const useTenantsStore = defineStore('tenants', {
         entityType: 'tenant',
         entityId: id,
         summary: `Updated tenant ${payload.fullName || id}.`,
+      })
+      useUiStore().toast({
+        title: 'Tenant updated',
+        message: 'The tenant profile details were saved.',
+      })
+    },
+    removeTenant(id, actor) {
+      const tenant = this.items.find((item) => item.id === id)
+      if (!tenant) return
+
+      const relatedLeases = getAll('leases').some((lease) => lease.tenantId === id)
+      const relatedPayments = getAll('payments').some((payment) => payment.tenantId === id)
+      const relatedProofs = getAll('paymentProofs').some((proof) => proof.tenantId === id)
+      const relatedTickets = getAll('tickets').some((ticket) => ticket.tenantId === id)
+      const relatedThreads = getAll('chatThreads').some((thread) => thread.tenantId === id)
+      const relatedMessages = getAll('messages').some((message) => message.senderId === id)
+
+      if (relatedLeases || relatedPayments || relatedProofs || relatedTickets || relatedThreads || relatedMessages) {
+        throw new Error('This tenant already has operational records and cannot be deleted.')
+      }
+
+      remove('tenants', id)
+      remove('users', tenant.userId)
+      this.refresh()
+      useAuditLogsStore().log({
+        actorRole: actor.role,
+        actorId: actor.id,
+        actionType: 'tenant_removed',
+        entityType: 'tenant',
+        entityId: id,
+        summary: `Removed tenant ${tenant.fullName}.`,
+      })
+      useUiStore().toast({
+        title: 'Tenant removed',
+        message: `${tenant.fullName} was removed from the roster.`,
       })
     },
   },
